@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>오늘의 학습</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    body {
+      background-color: #0a0a0a;
+      color: #ffffff;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+
+    .app-card {
+      background: #141414;
+      border: 1px solid #282828;
+      border-radius: 20px;
+      padding: 36px 28px;
+      width: 100%;
+      max-width: 440px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
+      position: relative;
+    }
+
+    .progress-track {
+      width: 100%;
+      height: 3px;
+      background: #222;
+      margin-bottom: 30px;
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 20%;
+      background: #ffffff;
+      transition: width 0.3s ease;
+    }
+
+    .brand-title {
+      font-size: 0.9rem;
+      letter-spacing: 2px;
+      color: #666;
+      text-transform: uppercase;
+      margin-bottom: 24px;
+      font-weight: 500;
+    }
+
+    .step {
+      display: none;
+    }
+
+    .step.active {
+      display: block;
+      animation: fadeIn 0.25s forwards ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .question {
+      font-size: 1.35rem;
+      font-weight: 600;
+      line-height: 1.4;
+      margin-bottom: 8px;
+      color: #f0f0f0;
+    }
+
+    .sub-text {
+      font-size: 0.85rem;
+      color: #777;
+      margin-bottom: 24px;
+    }
+
+    .option-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .option-btn {
+      background: #1c1c1c;
+      border: 1px solid #2e2e2e;
+      border-radius: 12px;
+      padding: 16px;
+      font-size: 0.95rem;
+      color: #ddd;
+      text-align: left;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: all 0.15s ease;
+    }
+
+    .option-btn:hover, .option-btn.selected {
+      background: #ffffff;
+      color: #000000;
+      border-color: #ffffff;
+      font-weight: 600;
+    }
+
+    .simple-input {
+      width: 100%;
+      background: #1c1c1c;
+      border: 1px solid #333;
+      border-radius: 12px;
+      padding: 16px;
+      color: #fff;
+      font-size: 1.1rem;
+      outline: none;
+      margin-bottom: 12px;
+    }
+
+    .simple-input:focus {
+      border-color: #888;
+    }
+
+    .action-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 32px;
+    }
+
+    .btn {
+      flex: 1;
+      padding: 16px;
+      border-radius: 12px;
+      border: none;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .btn-prev { background: #222; color: #777; }
+    .btn-next { background: #fff; color: #000; }
+    .btn-restart { background: #fff; color: #000; width: 100%; margin-top: 24px; }
+    .btn:disabled { opacity: 0.2; cursor: not-allowed; }
+
+    /* 스케줄 결과 스타일 */
+    .schedule-container {
+      max-height: 340px;
+      overflow-y: auto;
+      margin-top: 16px;
+      padding-right: 4px;
+    }
+
+    .result-card {
+      background: #1a1a1a;
+      border-left: 3px solid #fff;
+      padding: 14px 16px;
+      margin-bottom: 12px;
+      border-radius: 4px 10px 10px 4px;
+    }
+
+    .day-header {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .day-type { font-size: 0.75rem; color: #888; font-weight: normal; }
+    .result-time { font-size: 0.8rem; color: #aaa; margin-bottom: 4px; }
+    .result-subject { font-size: 0.9rem; color: #fff; line-height: 1.4; }
+  </style>
+</head>
+<body>
+
+<div class="app-card">
+  <div class="brand-title">TODAY'S STUDY</div>
+
+  <div class="progress-track" id="progressTrack">
+    <div class="progress-fill" id="progress"></div>
+  </div>
+
+  <!-- STEP 1: 시험일 -->
+  <div class="step active" id="step1">
+    <div class="question">Q1. 시험이 언제인가요?</div>
+    <div class="sub-text">시험 날짜를 선택해주세요.</div>
+    <input type="date" id="examDate" class="simple-input" onchange="enableNext()">
+  </div>
+
+  <!-- STEP 2: 컨디션 -->
+  <div class="step" id="step2">
+    <div class="question">Q2. 지금 몸 상태는?</div>
+    <div class="sub-text">컨디션에 맞게 공부량을 조절합니다.</div>
+    <div class="option-list">
+      <div class="option-btn" onclick="selectOption(this, '상태', '에너지 충전됨')">⚡️ 컨디션 좋음 (몰입 모드)</div>
+      <div class="option-btn" onclick="selectOption(this, '상태', '보통 피로도')">☕ 무난함 (적당한 집중)</div>
+      <div class="option-btn" onclick="selectOption(this, '상태', '많이 피곤함')">🫠 피곤함 (핵심만 짧게)</div>
+    </div>
+  </div>
+
+  <!-- STEP 3: 낮 일정 -->
+  <div class="step" id="step3">
+    <div class="question">Q3. 낮 시간 일과는?</div>
+    <div class="sub-text">주요 고정 일정을 확인합니다.</div>
+    <div class="option-list">
+      <div class="option-btn" onclick="selectOption(this, '낮일정', '학교등교')">🏫 학교/회사 (저녁 자율공부)</div>
+      <div class="option-btn" onclick="selectOption(this, '낮일정', '자율공부')">🏠 방학/휴무 (전일 자율공부)</div>
+    </div>
+  </div>
+
+  <!-- STEP 4: 과목 입력 -->
+  <div class="step" id="step4">
+    <div class="question">Q4. 무슨 공부를 하나요?</div>
+    <div class="sub-text">공부할 핵심 과목을 입력하세요.</div>
+    <input type="text" id="subjectInput" class="simple-input" placeholder="예: 수학, 영어, 탐구" oninput="enableNext()">
+  </div>
+
+  <!-- STEP 5: 공부 목표 시간 (수정 완료!) -->
+  <div class="step" id="step5">
+    <div class="question">Q5. 얼마 동안 공부할까요?</div>
+    <div class="sub-text">원하는 공부 시간을 고르세요.</div>
+    <div class="option-list">
+      <div class="option-btn" onclick="selectOption(this, '시간', '1')">⏱️ 1시간</div>
+      <div class="option-btn" onclick="selectOption(this, '시간', '2')">⏱️ 2시간</div>
+      <div class="option-btn" onclick="selectOption(this, '시간', '3')">⏱️ 3시간 이상</div>
+    </div>
+  </div>
+
+  <!-- STEP 6: 시간표 범위 선택 -->
+  <div class="step" id="step6">
+    <div class="question">Q6. 어떤 시간표를 원하시나요?</div>
+    <div class="sub-text">원하는 시간표 유형을 누르세요.</div>
+    <div class="option-list">
+      <div class="option-btn" onclick="selectOption(this, '타입', '오늘')">🎯 오늘 하루 시간표</div>
+      <div class="option-btn" onclick="selectOption(this, '타입', '일주일')">🗓️ 일주일 전체 시간표</div>
+    </div>
+  </div>
+
+  <!-- STEP 7: 최종 결과 -->
+  <div class="step" id="step7">
+    <div class="question" id="ddayResult">D-Day</div>
+    <div class="sub-text" id="summaryText">분석된 맞춤 플랜입니다.</div>
+    
+    <div class="schedule-container" id="scheduleOutput"></div>
+    
+    <button class="btn btn-restart" onclick="restartApp()">🔄 다시 짜기</button>
+  </div>
+
+  <!-- 하단 탐색 버튼 -->
+  <div class="action-row" id="actionRow">
+    <button class="btn btn-prev" id="prevBtn" onclick="moveStep(-1)" disabled>이전</button>
+    <button class="btn btn-next" id="nextBtn" onclick="moveStep(1)" disabled>다음 ➔</button>
+  </div>
+</div>
+
+<script>
+  let currentStep = 1;
+  const totalSteps = 6;
+  let userData = { date: '', status: '', daySchedule: '', subject: '', time: '', type: '' };
+
+  const dayNames = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'];
+
+  function enableNext() {
+    document.getElementById('nextBtn').disabled = false;
+  }
+
+  function selectOption(el, category, value) {
+    const parent = el.parentElement;
+    parent.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
+    el.classList.add('selected');
+
+    if(category === '상태') userData.status = value;
+    if(category === '낮일정') userData.daySchedule = value;
+    if(category === '시간') userData.time = value;
+    if(category === '타입') userData.type = value;
+
+    enableNext();
+  }
+
+  function moveStep(dir) {
+    if(currentStep === 1) userData.date = document.getElementById('examDate').value;
+    if(currentStep === 4) userData.subject = document.getElementById('subjectInput').value;
+
+    document.getElementById(`step${currentStep}`).classList.remove('active');
+    currentStep += dir;
+    document.getElementById(`step${currentStep}`).classList.add('active');
+
+    document.getElementById('prevBtn').disabled = (currentStep === 1);
+    document.getElementById('nextBtn').disabled = true;
+
+    if(currentStep === 1 && userData.date) enableNext();
+    if(currentStep === 4 && userData.subject) enableNext();
+
+    if(currentStep === 7) {
+      document.getElementById('actionRow').style.display = 'none';
+      document.getElementById('progressTrack').style.display = 'none';
+      renderResult();
+    } else {
+      document.getElementById('actionRow').style.display = 'flex';
+      document.getElementById('progressTrack').style.display = 'block';
+      document.getElementById('nextBtn').innerText = (currentStep === 6) ? '스케줄 보기' : '다음 ➔';
+    }
+
+    document.getElementById('progress').style.width = `${(currentStep / totalSteps) * 100}%`;
+  }
+
+  function renderResult() {
+    const target = new Date(userData.date);
+    const today = new Date();
+    const diffTime = target - today;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    const todayDayName = dayNames[today.getDay()];
+
+    document.getElementById('ddayResult').innerText = diffDays >= 0 ? `시험까지 D-${diffDays}일` : `시험일 경과`;
+    document.getElementById('summaryText').innerText = `오늘은 ${todayDayName}. [${userData.status}] 상태 맞춤 플랜`;
+
+    const output = document.getElementById('scheduleOutput');
+    output.innerHTML = '';
+
+    const hours = parseInt(userData.time) || 1;
+
+    // 1) 오늘 하루 시간표
+    if(userData.type === '오늘') {
+      let isWeekend = (today.getDay() === 0 || today.getDay() === 6);
+      let timeText = (userData.daySchedule === '학교등교' && !isWeekend) ? "저녁 자율 시간" : "오후 자율 시간";
+
+      output.innerHTML = `
+        <div class="result-card">
+          <div class="day-header">🎯 오늘 (${todayDayName}) 추천 플랜</div>
+          <div class="result-time">⏰ 추천 시간대: ${timeText} 중 (${hours}시간 몰입)</div>
+          <div class="result-subject">📖 <b>${userData.subject}</b> 핵심 개념 & 문제 풀이</div>
+        </div>
+        <div class="result-card" style="border-left-color: #666;">
+          <div class="day-header">☕ 마무리 15분</div>
+          <div class="result-time">⏰ 취침 전</div>
+          <div class="result-subject">오늘 틀린 문제 체크 & 오답 노트 정리</div>
+        </div>
+      `;
+    } 
+    // 2) 일주일 시간표
+    else {
+      for(let i = 0; i < 7; i++) {
+        let currentDate = new Date();
+        currentDate.setDate(today.getDate() + i);
+
+        let dayIdx = currentDate.getDay();
+        let dayName = dayNames[dayIdx];
+        let isWeekend = (dayIdx === 0 || dayIdx === 6);
+
+        let timeSlot = (userData.daySchedule === '학교등교' && !isWeekend) ? "저녁 시간대" : "자율 시간대";
+        let borderStyle = isWeekend ? "border-left-color: #aaa;" : "border-left-color: #fff;";
+
+        let taskDetail = "";
+        if(i === 0) taskDetail = `📖 ${userData.subject} 약점 개념 독해`;
+        else if(i % 3 === 1) taskDetail = `✏️ ${userData.subject} 단원별 기출 문제 풀이`;
+        else taskDetail = `🔁 ${userData.subject} 누적 오답 복습`;
+
+        output.innerHTML += `
+          <div class="result-card" style="${borderStyle}">
+            <div class="day-header">
+              <span>${dayName} ${i === 0 ? '(오늘)' : ''}</span>
+              <span class="day-type">${isWeekend ? '주말' : '평일'}</span>
+            </div>
+            <div class="result-time">⏰ 편한 ${timeSlot} 권장 (${hours}시간)</div>
+            <div class="result-subject">${taskDetail}</div>
+          </div>
+        `;
+      }
+    }
+  }
+
+  function restartApp() {
+    userData = { date: '', status: '', daySchedule: '', subject: '', time: '', type: '' };
+    
+    document.getElementById('examDate').value = '';
+    document.getElementById('subjectInput').value = '';
+    document.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
+
+    document.getElementById(`step${currentStep}`).classList.remove('active');
+    currentStep = 1;
+    document.getElementById('step1').classList.add('active');
+
+    document.getElementById('actionRow').style.display = 'flex';
+    document.getElementById('progressTrack').style.display = 'block';
+    document.getElementById('prevBtn').disabled = true;
+    document.getElementById('nextBtn').disabled = true;
+    document.getElementById('nextBtn').innerText = '다음 ➔';
+    document.getElementById('progress').style.width = '20%';
+  }
+</script>
+
+</body>
+</html>
